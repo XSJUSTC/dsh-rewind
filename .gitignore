@@ -1,0 +1,8 @@
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+
+# Local leftovers unrelated to this plugin
+install-dsh-anchored-standard.cmd
+安装说明.md

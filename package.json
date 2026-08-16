@@ -1,0 +1,49 @@
+{
+  "name": "@xsj/dsh-rewind",
+  "version": "2.1.0",
+  "description": "Rewind a DSH conversation to any user message: hide the tail from the chat view and the model context, keep the durable log intact, cancel freely before sending.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "rewind",
+    "conversation"
+  ],
+  "author": "XSJUSTC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/XSJUSTC/dsh-rewind.git"
+  },
+  "homepage": "https://github.com/XSJUSTC/dsh-rewind#readme",
+  "bugs": "https://github.com/XSJUSTC/dsh-rewind/issues",
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "README_EN.md",
+    "LICENSE"
+  ]
+}

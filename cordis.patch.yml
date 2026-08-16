@@ -1,0 +1,7 @@
+# @xsj/dsh-rewind bundle layer.
+# Mounted by adding this package to a profile (dsh plugin --profile <name> add
+# <this-dir>) — the profile boot merges this patch, inserting the host plugin
+# row; the web client scan then picks up dsh.client and serves lib/client.js.
+- insert:
+    - id: rewind
+      name: '@xsj/dsh-rewind'
