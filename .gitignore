@@ -2,13 +2,8 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
-skills/
 
-# Local leftovers unrelated to this plugin
-install-dsh-anchored-standard.cmd
-安装说明.md
-
-# Non-plugin files (stay on disk, not in repo)
+# Non-plugin files (local only, never push)
 demo/
 skills/
 screenshot.png
