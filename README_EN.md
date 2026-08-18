@@ -8,6 +8,8 @@ steps.
 
 ## Features
 
+![Rewind action preview](screenshot.png)
+
 - Every user message row gains a **↺ rewind** action beside the copy icon.
   Clicking it:
   - **interrupts the current turn** if the model is still thinking/streaming;
