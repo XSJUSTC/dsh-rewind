@@ -7,3 +7,10 @@ skills/
 # Local leftovers unrelated to this plugin
 install-dsh-anchored-standard.cmd
 瀹夎璇存槑.md
+
+# Non-plugin files (stay on disk, not in repo)
+demo/
+skills/
+screenshot.png
+install-dsh-anchored-standard.cmd
+安装说明.md
