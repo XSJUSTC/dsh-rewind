@@ -8,8 +8,6 @@ steps.
 
 ## Features
 
-![Rewind action preview](screenshot.png)
-
 - Every user message row gains a **↺ rewind** action beside the copy icon.
   Clicking it:
   - **interrupts the current turn** if the model is still thinking/streaming;
@@ -26,6 +24,16 @@ steps.
   view and never enters the model context again.
 - Only user messages can be rewound; assistant messages have no rewind entry
   (the host validates the event type).
+
+## Version compatibility
+
+- **v2.1.2 is verified against dsh 0.1.2-rc.1 and newer release lines** (including the Android DSHA embedded web client), while keeping 0.1.x alpha hosts working — every adaptation is a dual-track fallback (new API first, old API as fallback):
+  - Session handle resolution: falls back to a `list()` scan when `sessions.get()` misses, tolerating the `session-` key prefix;
+  - Event log access: prefers the official `snapshotEvents()` / `eventAt()`, auto-falling back to `session.events` on older hosts;
+  - Chat hiding is now **purely DOM-driven** (per-row seq stamps taken from slot props + a MutationObserver), dropping all assumptions about the host store's internal shape (`s.chat.*` drift across versions was exactly what broke v2.1.1 on rc.1);
+  - Fixed: the cancel-rewind button crashing where composer slots don't provide `props.useSession`, and the banner not dismissing after commit.
+- Debug logging is off by default; set `XSJ_REWIND_DEBUG=/path/to/file` to persist server-side resolution traces and handler errors.
+- Known symptoms of ≤2.1.1 on dsh ≥0.1.2-rc.1: mark requests 404, messages not hidden, no cancel button, banner stuck after send — upgrade to ≥2.1.2.
 
 ## Log & recovery
 
