@@ -19,13 +19,12 @@ DSH（[DeepSeek Harness](https://github.com/deepseek-ai)）会话回退插件。
 
 ## 版本兼容性
 
-- **v2.1.2 起实测支持 dsh 0.1.2-rc.1 及更新版本线**（含 Android DSHA 内嵌 Web），并保留对 0.1.x alpha 旧宿主的兼容——所有适配均为「新 API 优先、旧 API 回退」的双轨兜底：
-  - 会话句柄解析：`sessions.get()` 直查失败时回退 `list()` 扫描，并适配 `session-` 前缀键格式；
-  - 事件流读取：优先官方 `snapshotEvents()` / `eventAt()`，旧宿主自动回退 `session.events`；
-  - 聊天隐藏改为**纯 DOM 实现**（经插槽 props 给行打 seq 戳 + MutationObserver 驱动），不再依赖宿主 store 内部形状（`s.chat.*` 随版本漂移正是 v2.1.1 在 rc.1 上失效的根因）；
-  - 修复：composer 插槽无 `props.useSession` 导致「取消回溯」按钮整体崩溃、提交后横幅不消失。
-- 调试日志默认关闭；设环境变量 `XSJ_REWIND_DEBUG=/path/to/file` 后，服务端会话解析与处理器异常会落盘到该文件。
-- 旧版（≤2.1.1）在 dsh ≥0.1.2-rc.1 上的已知症状：mark 请求 404、消息不隐藏、无取消按钮、横幅不消失——请升级到 ≥2.1.2。
+- **v2.2.0 实测支持 dsh 0.1.5-rc.2**，并保留对 0.1.x 早期版本的兼容——事件流读取优先官方 `snapshotEvents()` / `eventAt()`，旧宿主自动回退 `session.events`。
+- v2.2.0 变更：
+  - 适配 0.1.5-rc.2：`primitives.MessageText` 已被移除，用户气泡文本改用与官方相同的 `projectUserText()` 渲染（自动获得 @引用/会话 chip 高亮）；
+  - 客户端 inject 声明更新：移除已废弃的 `@deepseek-ai/dsh-client-runtime`，补上 `@deepseek-ai/dsh-client-ui-attachment`（ImageGallery 所在模块行）；
+  - 清理冗余与调试残留代码（调试日志、无效的 fuzzy 会话解析、两处死代码）。
+- 旧版（≤2.1.2）在 dsh 0.1.5-rc.2 上的已知症状：用户消息行渲染崩溃、回退按钮不出现——请升级到 ≥2.2.0。
 
 ## 日志与可恢复性
 
@@ -65,10 +64,11 @@ dsh plugin --profile web remove @xsj/dsh-rewind
   中断当前回合；排队消息保留，随后从截断点继续。
 - **生效点**：`agent/pre-step` 瀑布中，待回退会话一旦有新输入消息进入步骤即提交隐藏区间
   `[targetSeq, 当前日志末尾]`；新消息在此之后追加，不受影响。
-- **UI 隐藏**：聊天行包裹元素带 `data-chat-flow-key`，插件按隐藏集合动态维护一条
-  `display:none` 样式；取消/切换会话即还原，不改动任何既有渲染器。
-- **回退图标**：以 priority `-1` 接管 `conversation.chat.node` 的 `user`/`steering`
-  渲染器（槽位系统的原生遮蔽机制），行内复刻原生气泡（MessageText / ImageGallery /
+- **UI 隐藏**：纯 DOM 实现——聊天行包裹元素带 `data-chat-flow-key`，客户端按行打 seq 戳
+  并由 MutationObserver 驱动，对隐藏行内联 `display:none`；不依赖宿主 store 内部形状，
+  取消/切换会话即还原，不改动任何既有渲染器。
+- **回退图标**：以优先级 `-1` 接管 `conversation.chat.node` 的 `user`/`steering`
+  渲染器（槽位系统的原生遮蔽机制），行内复刻原生气泡（projectUserText / ImageGallery /
   Tooltip / writeClipboard），追加 ↺ 按钮。
 
 ## 移植

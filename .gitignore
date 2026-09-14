@@ -1,11 +1,2 @@
-node_modules/
+锘縩ode_modules/
 *.log
-.DS_Store
-Thumbs.db
-
-# Non-plugin files (local only, never push)
-demo/
-skills/
-screenshot.png
-install-dsh-anchored-standard.cmd
-安装说明.md

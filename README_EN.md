@@ -27,13 +27,21 @@ steps.
 
 ## Version compatibility
 
-- **v2.1.2 is verified against dsh 0.1.2-rc.1 and newer release lines** (including the Android DSHA embedded web client), while keeping 0.1.x alpha hosts working — every adaptation is a dual-track fallback (new API first, old API as fallback):
-  - Session handle resolution: falls back to a `list()` scan when `sessions.get()` misses, tolerating the `session-` key prefix;
-  - Event log access: prefers the official `snapshotEvents()` / `eventAt()`, auto-falling back to `session.events` on older hosts;
-  - Chat hiding is now **purely DOM-driven** (per-row seq stamps taken from slot props + a MutationObserver), dropping all assumptions about the host store's internal shape (`s.chat.*` drift across versions was exactly what broke v2.1.1 on rc.1);
-  - Fixed: the cancel-rewind button crashing where composer slots don't provide `props.useSession`, and the banner not dismissing after commit.
-- Debug logging is off by default; set `XSJ_REWIND_DEBUG=/path/to/file` to persist server-side resolution traces and handler errors.
-- Known symptoms of ≤2.1.1 on dsh ≥0.1.2-rc.1: mark requests 404, messages not hidden, no cancel button, banner stuck after send — upgrade to ≥2.1.2.
+- **v2.2.0 is verified against dsh 0.1.5-rc.2** while keeping earlier 0.1.x
+  hosts working — event-log access prefers the official `snapshotEvents()` /
+  `eventAt()` and falls back to `session.events` on older hosts.
+- Changes in v2.2.0:
+  - Adapted to 0.1.5-rc.2: `primitives.MessageText` was removed; the user
+    bubble now renders text through the same `projectUserText()` helper the
+    shipped bubble uses (reference/session chips included);
+  - Client inject declaration updated: dropped the retired
+    `@deepseek-ai/dsh-client-runtime`, added
+    `@deepseek-ai/dsh-client-ui-attachment` (the module row owning
+    ImageGallery);
+  - Dead code and debug scaffolding removed (debug log file, fuzzy session
+    resolution, two unused code paths).
+- Known symptoms of ≤2.1.2 on dsh 0.1.5-rc.2: user message rows crash while
+  rendering, no rewind button — upgrade to ≥2.2.0.
 
 ## Log & recovery
 
@@ -85,13 +93,15 @@ dsh plugin --profile web remove @xsj/dsh-rewind
   claims a real input message seals the hidden range
   `[targetSeq, current log end]`; the new message is appended afterwards and
   stays visible.
-- **UI hiding**: chat rows carry `data-chat-flow-key`; the plugin maintains one
-  dynamic `display:none` rule set for the hidden keys. Cancelling or switching
-  sessions restores everything without touching any shipped renderer.
+- **UI hiding**: purely DOM-driven — chat rows carry `data-chat-flow-key`; the
+  client stamps each row with its seq and a MutationObserver applies inline
+  `display:none` to hidden rows. Nothing depends on the host store's internal
+  shape; cancelling or switching sessions restores everything without touching
+  any shipped renderer.
 - **Rewind icon**: takes over the `user`/`steering` cells of
-  `conversation.chat.node` at priority `-1` (the slot system's native shadowing),
-  replicating the native bubble (MessageText / ImageGallery / Tooltip /
-  writeClipboard) plus the ↺ button.
+  `conversation.chat.node` at priority `-1` (the slot system's native
+  shadowing), replicating the native bubble (projectUserText / ImageGallery /
+  Tooltip / writeClipboard) plus the ↺ button.
 
 ## Porting
 
