@@ -4,6 +4,8 @@
 
 DSH（[DeepSeek Harness](https://github.com/deepseek-ai)）会话回退插件。永久 bundle 插件：宿主机半 + Web 客户端半，零依赖、零构建步骤。
 
+![回退按钮预览](https://raw.githubusercontent.com/XSJUSTC/dsh-rewind/main/screenshot.png)
+
 ## 功能
 
 - 每条用户消息的操作行（复制图标旁）出现 **↺ 回退** 图标。点击后：

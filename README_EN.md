@@ -6,6 +6,8 @@ A conversation-rewind plugin for DSH (DeepSeek Harness). A permanent bundle
 plugin with a host half and a web client half — zero dependencies, zero build
 steps.
 
+![Rewind button preview](https://raw.githubusercontent.com/XSJUSTC/dsh-rewind/main/screenshot.png)
+
 ## Features
 
 - Every user message row gains a **↺ rewind** action beside the copy icon.
