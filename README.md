@@ -20,15 +20,27 @@ DSH（[DeepSeek Harness](https://github.com/deepseek-ai)）会话回退插件。
 
 ## 版本兼容性
 
-- **v2.2.0 实测支持 dsh 0.1.5-rc.2**，并保留对 0.1.x 早期版本的兼容——事件流读取优先官方 `snapshotEvents()` / `eventAt()`，旧宿主自动回退 `session.events`。
+- **v2.3.0 实测支持 dsh 0.1.5-rc.2**，并保留对 0.1.x 早期版本的兼容——事件流读取优先官方 `snapshotEvents()` / `eventAt()`，旧宿主自动回退 `session.events`。
 - v2.3.0 变更：
-  - 回退时同步**回填图片**：Host 半新增 `/api/xsj-rewind/image` 端点，依 attachmentId 从会话日志读回原始字节；客户端构造成 `File` 后通过 composer 的隐藏文件输入重新入档，自动触发官方的图片数量/大小校验。
-  - Host 半新增 `attachments` 服务注入（读回图片字节用）。
+  - **回退时同步回填图片**：Host 半新增 `/api/xsj-rewind/image` 端点，依 attachmentId 从会话日志读回原始字节；客户端构造成 `File` 后通过 composer 的隐藏文件输入重新入档，自动触发官方的图片数量/大小校验。
+  - **修复图片消息的连锁渲染崩溃**：`@deepseek-ai/dsh-client-ui-attachment` 客户端半在 0.1.5-rc.2 只导出 `apply`/`inject`（不再有 `ImageGallery` 组件），此前引用它会让含图片的用户消息抛错，并被 React 错误边界放大到**前后相邻的整片消息**（表现为大范围回退按钮消失）。现改用官方同款 `renderMessageImages` prop（路由到 `conversation.message.images` 槽位）。
+  - **加固槽位注册**：`slots` 服务改为防御性获取并逐席位 `try/catch`。此前任一次注册冲突（如客户端 HMR 重载竞态）都会中断整个 `apply()`，导致「样式已注入但渲染器全丢」。
+  - **DOM 隐藏驱动更保守**：未打戳的行不再继承相邻行的隐藏判定，避免刚发送的消息在打戳完成前被误隐藏。
+  - **图片回填串行化**：多次回退不再争用同一个文件输入。
+  - Host 半的 `attachments` 服务改为运行时解析（`ctx.get`），缺少附件 provider 时插件仍能正常挂载，仅图片端点降级返回 501。
+  - 资源上限：会话状态表、图片引用缓存均设有容量上限；图片响应与 attachmentId 长度增加校验。
 - v2.2.0 变更：
   - 适配 0.1.5-rc.2：`primitives.MessageText` 已被移除，用户气泡文本改用与官方相同的 `projectUserText()` 渲染（自动获得 @引用/会话 chip 高亮）；
-  - 客户端 inject 声明更新：移除已废弃的 `@deepseek-ai/dsh-client-runtime`，补上 `@deepseek-ai/dsh-client-ui-attachment`（ImageGallery 所在模块行）；
+  - 客户端 inject 声明更新：移除已废弃的 `@deepseek-ai/dsh-client-runtime`；
   - 清理冗余与调试残留代码（调试日志、无效的 fuzzy 会话解析、两处死代码）。
-- 旧版（≤2.1.2）在 dsh 0.1.5-rc.2 上的已知症状：用户消息行渲染崩溃、回退按钮不出现——请升级到 ≥2.2.0。
+- 旧版（≤2.1.2）在 dsh 0.1.5-rc.2 上的已知症状：用户消息行渲染崩溃、回退按钮不出现——请升级到 ≥2.3.0。
+
+## 安全说明
+
+- 四个端点（`mark` / `cancel` / `state` / `image`）注册在 dsh 的 Web 服务器上，**遵循 dsh 自身的本地信任模型**：`dsh web` 默认只监听 `127.0.0.1`，因此端点仅本机可达、不经 dsh 的 API 鉴权层。若你把 dsh web 绑定到对外地址（如 `0.0.0.0`），这些端点会随之外露——此时请自行在网络层（防火墙 / 反向代理鉴权）加以限制。
+- `/image` 端点的授权模型：只会返回**当前会话日志中确实引用过**的 attachment（按 attachmentId 在事件流中查找），不提供按路径或任意 id 读取的能力；字节读取由 dsh 的 `attachments.readImage` 完成，含完整性校验。
+- 请求体上限 64 KB；attachmentId 长度上限 256；单张图片响应上限 64 MB。
+- 插件不收集、不上报任何数据；所有状态都留在本地会话日志中。
 
 ## 日志与可恢复性
 
