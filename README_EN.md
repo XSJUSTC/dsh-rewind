@@ -6,10 +6,6 @@ A conversation-rewind plugin for DSH (DeepSeek Harness). A permanent bundle
 plugin with a host half and a web client half — zero dependencies, zero build
 steps.
 
-| Rewind button | Composer after rewind |
-| --- | --- |
-| ![Rewind button](https://raw.githubusercontent.com/XSJUSTC/dsh-rewind/main/screenshot.png) | ![Composer after rewind](https://raw.githubusercontent.com/XSJUSTC/dsh-rewind/main/screenshot-input.png) |
-
 ## Features
 
 - Every user message row gains a **↺ rewind** action beside the copy icon.
@@ -18,6 +14,9 @@ steps.
   - hides that message and everything after it from the chat view (as if the
     tail never happened);
   - pre-fills the composer with the message text — **unsent and editable**;
+  - **re-attaches any images** that rode the message back into the composer
+    (the host reads the original bytes from the session log and feeds them back
+    through the official attachment intake, so image count/size limits apply);
   - on the next send, the model only sees the truncated history (everything
     before the rewind point) plus your new message.
 - While a rewind is pending:
@@ -34,6 +33,14 @@ steps.
 - **v2.2.0 is verified against dsh 0.1.5-rc.2** while keeping earlier 0.1.x
   hosts working — event-log access prefers the official `snapshotEvents()` /
   `eventAt()` and falls back to `session.events` on older hosts.
+- Changes in v2.3.0:
+  - Rewind now **re-attaches images**: the host half exposes
+    `/api/xsj-rewind/image` to read a message's durable image bytes by
+    attachmentId, and the client rebuilds `File` objects and feeds them back
+    through the composer's hidden file input, inheriting the shipped image
+    count/size validation.
+  - The host half now injects the `attachments` service (for reading image
+    bytes).
 - Changes in v2.2.0:
   - Adapted to 0.1.5-rc.2: `primitives.MessageText` was removed; the user
     bubble now renders text through the same `projectUserText()` helper the

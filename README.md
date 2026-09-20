@@ -4,16 +4,13 @@
 
 DSH（[DeepSeek Harness](https://github.com/deepseek-ai)）会话回退插件。永久 bundle 插件：宿主机半 + Web 客户端半，零依赖、零构建步骤。
 
-| 回退按钮 | 回退后输入框 |
-| --- | --- |
-| ![回退按钮](https://raw.githubusercontent.com/XSJUSTC/dsh-rewind/main/screenshot.png) | ![回退后输入框](https://raw.githubusercontent.com/XSJUSTC/dsh-rewind/main/screenshot-input.png) |
-
 ## 功能
 
 - 每条用户消息的操作行（复制图标旁）出现 **↺ 回退** 图标。点击后：
   - 若模型正在思考/输出，**立即打断**当前回合；
   - 该消息及其后的所有内容在聊天视图中隐藏（如同从未发生）；
   - 该消息文本自动填入输入框，**未发送、可编辑**；
+  - 该消息携带的**图片也会重新挂回输入框**（从会话日志读回原始字节，走官方附件入档流程，自动套用图片数量/大小限制）；
   - 下一次发送时，模型只看到截断后的历史（回退点之前）+ 新消息。
 - 回退待发送期间：
   - 输入框上方出现提示横幅；
@@ -24,6 +21,9 @@ DSH（[DeepSeek Harness](https://github.com/deepseek-ai)）会话回退插件。
 ## 版本兼容性
 
 - **v2.2.0 实测支持 dsh 0.1.5-rc.2**，并保留对 0.1.x 早期版本的兼容——事件流读取优先官方 `snapshotEvents()` / `eventAt()`，旧宿主自动回退 `session.events`。
+- v2.3.0 变更：
+  - 回退时同步**回填图片**：Host 半新增 `/api/xsj-rewind/image` 端点，依 attachmentId 从会话日志读回原始字节；客户端构造成 `File` 后通过 composer 的隐藏文件输入重新入档，自动触发官方的图片数量/大小校验。
+  - Host 半新增 `attachments` 服务注入（读回图片字节用）。
 - v2.2.0 变更：
   - 适配 0.1.5-rc.2：`primitives.MessageText` 已被移除，用户气泡文本改用与官方相同的 `projectUserText()` 渲染（自动获得 @引用/会话 chip 高亮）；
   - 客户端 inject 声明更新：移除已废弃的 `@deepseek-ai/dsh-client-runtime`，补上 `@deepseek-ai/dsh-client-ui-attachment`（ImageGallery 所在模块行）；
