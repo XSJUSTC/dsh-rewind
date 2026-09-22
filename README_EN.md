@@ -30,9 +30,48 @@ steps.
 
 ## Version compatibility
 
-- **v2.3.0 is verified against dsh 0.1.5-rc.2** while keeping earlier 0.1.x
+- **v2.4.0 is verified against dsh 0.1.5-rc.2** while keeping earlier 0.1.x
   hosts working — event-log access prefers the official `snapshotEvents()` /
   `eventAt()` and falls back to `session.events` on older hosts.
+- **v2.4.0 fixes "the model's output was not hidden"** (the main fix here):
+  - **Cause**: the plugin shadows only the `user` / `steering` renderers of
+    `conversation.chat.node`, so only those rows ever carried a `data-xsj-seq`
+    stamp. The model's `assistant-step` output, tool calls and context rows
+    render through the shipped renderer and were **never stamped**. The hiding
+    pass treated an unstamped row as "no evidence" and therefore visible, so a
+    committed range hid the prompt while the answer stayed on screen.
+  - **Fix**: an unstamped row is no longer given up on. It inherits the verdict
+    of the nearest stamped row **before** it, which is the turn it belongs to;
+    only a leading run with no evidence at all falls back to the evidence that
+    follows. The forward attribution matters: "hidden if anything later is
+    hidden" sweeping in the answer *above* a range is a real regression that was
+    hit during development and is now covered by `test/hiding.test.mjs`.
+  - **Restore the DOM on driver teardown**: hiding writes to the live DOM, but
+    teardown only cleared the timer and observer. Switching sessions or
+    remounting the composer left the hidden rows for the next view (blank rows
+    out of nowhere). Teardown now releases every row carrying this plugin's
+    marker — and only those, leaving any other feature's `display` untouched.
+  - **Tell "no data yet" apart from "no ranges"**: on a cold load the driver ran
+    before `/state` answered, and the two were indistinguishable, so **every
+    load flashed** the rewound tail back into view; if the read failed it stayed
+    visible for good, leaving the UI showing messages the model cannot see.
+    Sessions now track `fetched` / `fetchFailed`: while no answer has arrived the
+    current verdicts are held and a retry is scheduled, and a locally recorded
+    mark still applies immediately.
+  - **Host: `agent/disposed` no longer strands the patch**: `ensurePatched`
+    installs a `deriveMessages` override on the session instance closing over
+    `st.ranges`, and disposal used to drop the state record outright, leaving
+    that override with no record to unwind it — the session kept filtering its
+    model context **permanently**, surviving a plugin reload. Disposal now
+    follows the same rule as `evictIfNeeded`: unwind first, then drop.
+  - **`ensurePatched` is self-healing**: it no longer trusts the `st.patched`
+    flag alone but compares the installed method against the recorded wrapper
+    and re-installs when they diverge (idempotent), so a flag that drifts out of
+    sync cannot silently stop hiding the tail from the model.
+  - **Image references cache hits only**: a reference, once in the append-only
+    log, can never disappear, so a hit stays valid; a miss cannot, and caching
+    one made `/image` answer 404 for an id the log does reference — surfaced as
+    an image silently dropped on rewind.
 - Changes in v2.3.0:
   - Rewind now **re-attaches images**: the host half exposes
     `/api/xsj-rewind/image` to read a message's durable image bytes by
@@ -52,7 +91,8 @@ steps.
     `apply()`, leaving the stylesheet injected with every renderer lost.
   - **Safer DOM hide driver**: an unstamped row no longer inherits a
     neighbour's hidden verdict, so a freshly sent message cannot be hidden
-    while its view is still stamping.
+    while its view is still stamping. (**Corrected in v2.4.0**: that same
+    conservatism made the model's output permanently un-hideable — see above.)
   - **Serialized image re-attachment** so concurrent rewinds cannot race on the
     same file input.
   - The host half resolves `attachments` at call time (`ctx.get`), so a missing

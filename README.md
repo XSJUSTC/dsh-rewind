@@ -20,12 +20,20 @@ DSH（[DeepSeek Harness](https://github.com/deepseek-ai)）会话回退插件。
 
 ## 版本兼容性
 
-- **v2.3.0 实测支持 dsh 0.1.5-rc.2**，并保留对 0.1.x 早期版本的兼容——事件流读取优先官方 `snapshotEvents()` / `eventAt()`，旧宿主自动回退 `session.events`。
+- **v2.4.0 实测支持 dsh 0.1.5-rc.2**，并保留对 0.1.x 早期版本的兼容——事件流读取优先官方 `snapshotEvents()` / `eventAt()`，旧宿主自动回退 `session.events`。
+- **v2.4.0 修复「模型输出没有被隐藏」**（本版主要修复）：
+  - **成因**：本插件只接管了 `conversation.chat.node` 的 `user` / `steering` 两个渲染器，因此只有这两类行会被打上 `data-xsj-seq` 标记；模型的 `assistant-step` 输出、工具调用、context 等行走官方渲染器，**从来没有标记**。此前隐藏判定对未标记的行一律「不隐藏」，于是提交区间后只藏住了提问、回答仍然留在屏幕上。
+  - **修法**：未标记的行不再被放弃，而是按 DOM 顺序从**前一条已标记行**继承判定——它属于其所跟随的那一轮。仅对「前面完全没有证据」的前导行才回退到后方证据。这个前向归属是必须的：若改成「后面有隐藏就算隐藏」，区间**上方**那条回答会被误藏（开发过程中确实踩到，已由 `test/hiding.test.mjs` 覆盖）。
+  - **驱动卸载时还原 DOM**：隐藏是直接写 DOM 的，此前 teardown 只清定时器与 observer。切换会话或 composer 重挂载会把隐藏行留给下一个视图（凭空出现空白行）。现在 teardown 会释放所有带本插件标记的行，且只释放这些行，不影响其他特性设置的 display。
+  - **区分「没数据」与「没有区间」**：冷加载（刷新 / 切会话）时驱动先于 `/state` 返回而运行，此前二者无法区分，导致**每次加载都会闪现**已被回退掉的尾巴；若 `/state` 请求失败，则永久保持可见——界面看到的消息模型其实看不见。现在按会话记录 `fetched` / `fetchFailed`：未拿到答复时保持当前判定不动并重试，拿到后才据实隐藏；本地刚记录下的 mark 仍会立即生效。
+  - **Host：`agent/disposed` 不再泄漏补丁**：`ensurePatched` 会在 session 实例上装一个闭包了 `st.ranges` 的 `deriveMessages` 覆盖，而 disposed 此前直接丢弃状态记录，使该覆盖无人可解——会话会**永久**继续按已回退的区间过滤模型上下文，且跨插件重载存活。现在与 `evictIfNeeded` 同规则，先解挂再丢弃。
+  - **`ensurePatched` 改为自愈**：不再只信 `st.patched` 标志，而是比对实际安装的方法与记录的包装器，不一致就重新安装（幂等），避免标志与实际脱节后**静默停止**对模型隐藏。
+  - **图片引用只缓存命中结果**：引用一旦进入 append-only 日志就不会消失，命中可长期有效；未命中则不然——缓存未命中会让 `/image` 对一个日志里确实存在的 id 返回 404，表现为回退时图片被静默丢弃。
 - v2.3.0 变更：
   - **回退时同步回填图片**：Host 半新增 `/api/xsj-rewind/image` 端点，依 attachmentId 从会话日志读回原始字节；客户端构造成 `File` 后通过 composer 的隐藏文件输入重新入档，自动触发官方的图片数量/大小校验。
   - **修复图片消息的连锁渲染崩溃**：`@deepseek-ai/dsh-client-ui-attachment` 客户端半在 0.1.5-rc.2 只导出 `apply`/`inject`（不再有 `ImageGallery` 组件），此前引用它会让含图片的用户消息抛错，并被 React 错误边界放大到**前后相邻的整片消息**（表现为大范围回退按钮消失）。现改用官方同款 `renderMessageImages` prop（路由到 `conversation.message.images` 槽位）。
   - **加固槽位注册**：`slots` 服务改为防御性获取并逐席位 `try/catch`。此前任一次注册冲突（如客户端 HMR 重载竞态）都会中断整个 `apply()`，导致「样式已注入但渲染器全丢」。
-  - **DOM 隐藏驱动更保守**：未打戳的行不再继承相邻行的隐藏判定，避免刚发送的消息在打戳完成前被误隐藏。
+  - **DOM 隐藏驱动更保守**：未打戳的行不继承相邻行的隐藏判定，避免刚发送的消息在打戳完成前被误隐藏。（**v2.4.0 修正**：该保守策略同时导致模型输出永远不被隐藏，见上方 v2.4.0 说明。）
   - **图片回填串行化**：多次回退不再争用同一个文件输入。
   - Host 半的 `attachments` 服务改为运行时解析（`ctx.get`），缺少附件 provider 时插件仍能正常挂载，仅图片端点降级返回 501。
   - 资源上限：会话状态表、图片引用缓存均设有容量上限；图片响应与 attachmentId 长度增加校验。
@@ -83,6 +91,10 @@ dsh plugin --profile web remove @xsj/dsh-rewind
 - **UI 隐藏**：纯 DOM 实现——聊天行包裹元素带 `data-chat-flow-key`，客户端按行打 seq 戳
   并由 MutationObserver 驱动，对隐藏行内联 `display:none`；不依赖宿主 store 内部形状，
   取消/切换会话即还原，不改动任何既有渲染器。
+  - 只有 `user` / `steering` 行**有 seq 可打**；其余行（模型输出、工具调用、context）
+    走官方渲染器、无标记，因此按 DOM 顺序从前一条已标记行**前向归属**，前导无证据的行
+    才回退到后方证据。不再采用「未打戳即不隐藏」。
+  - 隐藏状态写的是活动 DOM，故驱动卸载时必须释放（且只释放带本插件标记的行）。
 - **回退图标**：以优先级 `-1` 接管 `conversation.chat.node` 的 `user`/`steering`
   渲染器（槽位系统的原生遮蔽机制），行内复刻原生气泡（projectUserText / ImageGallery /
   Tooltip / writeClipboard），追加 ↺ 按钮。
