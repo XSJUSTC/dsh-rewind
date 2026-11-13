@@ -20,6 +20,7 @@ DSH（[DeepSeek Harness](https://github.com/deepseek-ai)）会话回退插件。
 
 ## 版本兼容性
 
+- **支持 DSH 0.2.2**（当前版本实测）：0.2.x 宿主移除了 `@deepseek-ai/dsh-client-ui-primitives` 包且聊天流行的行嵌套结构变化，本版均已适配——UiPrimitives 改为守卫式加载并内置剪贴板回退，行查找兼容新旧两种 DOM 结构。
 - **v2.4.0 实测支持 dsh 0.1.5-rc.2**，并保留对 0.1.x 早期版本的兼容——事件流读取优先官方 `snapshotEvents()` / `eventAt()`，旧宿主自动回退 `session.events`。
 - **v2.4.0 修复「模型输出没有被隐藏」**（本版主要修复）：
   - **成因**：本插件只接管了 `conversation.chat.node` 的 `user` / `steering` 两个渲染器，因此只有这两类行会被打上 `data-xsj-seq` 标记；模型的 `assistant-step` 输出、工具调用、context 等行走官方渲染器，**从来没有标记**。此前隐藏判定对未标记的行一律「不隐藏」，于是提交区间后只藏住了提问、回答仍然留在屏幕上。
